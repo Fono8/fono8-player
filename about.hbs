@@ -1,0 +1,27 @@
+# Third-party notices
+
+Fono8 is licensed under the GNU General Public License v3.0 or later (see
+`LICENSE`). It includes the following third-party components, each under its own
+license reproduced below.
+
+## Overview
+
+{{#each overview}}
+- **{{{name}}}** ({{count}} components)
+{{/each}}
+
+## Licenses
+
+{{#each licenses}}
+### {{{name}}}
+
+Used by:
+{{#each used_by}}
+- [{{crate.name}} {{crate.version}}]({{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}})
+{{/each}}
+
+```text
+{{{text}}}
+```
+
+{{/each}}

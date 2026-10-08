@@ -1,0 +1,22 @@
+[package]
+name = "fono8-web"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.89"
+description = "Fono8 helper process: embedded YouTube Music web session and player"
+license = "GPL-3.0-or-later"
+publish = false
+
+[[bin]]
+name = "fono8-web"
+path = "src/main.rs"
+
+[dependencies]
+wry = "0.57"
+tao = "0.37"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+fono8-ytm-core = { path = "../ytm-core" }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = "0.18"

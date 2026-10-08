@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fono8 Spotify</title>
+<style>
+  :root { color-scheme: dark; font: 14px sans-serif; color: #e8f0ff; background: #071428; }
+  body { margin: 0; padding: 18px; display: flex; align-items: center; gap: 18px; }
+  img { width: 112px; height: 112px; object-fit: contain; border-radius: 8px; }
+  img:not([src]) { visibility: hidden; }
+  strong { display: block; font-size: 18px; margin-bottom: 8px; }
+  #artist { color: #93a6c8; }
+  a { display: block; margin-top: 12px; color: #1ed760; }
+</style>
+<img id="cover" alt="">
+<div><strong id="title">Spotify</strong><span id="artist"></span><a id="source" hidden>Spotify</a></div>
+<script>
+  const script = document.createElement('script');
+  script.src = location.pathname + '/player.js';
+  document.head.appendChild(script);
+</script>
+</html>

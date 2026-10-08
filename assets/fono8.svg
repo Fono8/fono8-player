@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 128 128">
+  <title>Fono8</title>
+  <defs>
+    <linearGradient id="surface" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10253e"/>
+      <stop offset="55%" stop-color="#071428"/>
+      <stop offset="100%" stop-color="#221936"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3de8f7"/>
+      <stop offset="100%" stop-color="#9b6dff"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="124" height="124" rx="28" fill="url(#surface)"/>
+  <rect x="2.5" y="2.5" width="123" height="123" rx="27.5" fill="none" stroke="#2a3e59"/>
+  <g stroke="url(#accent)" stroke-width="9" stroke-linecap="round">
+    <path d="M28 55v18M46 34v60M64 46v36M82 25v78M100 52v24"/>
+  </g>
+</svg>

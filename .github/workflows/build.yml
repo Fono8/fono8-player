@@ -1,0 +1,194 @@
+name: Desktop builds
+
+# Pull requests to develop and pushes to develop: tests on Linux and Windows.
+# A `v<version>` tag (git flow puts it on main) and manual runs: tests, then the
+# Linux (tar.gz + AppImage) and Windows (ZIP) packages; a tag also creates a
+# draft release.
+# macOS: add the commented matrix entries below once a Mac build has been tested
+# (scripts/package.sh already produces an ad-hoc signed .dmg).
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["develop"]
+    tags: ["v*"]
+  pull_request:
+    branches: ["develop"]
+    paths:
+      - "src/**"
+      - "ytm-core/**"
+      - "fono8-web/**"
+      - "assets/**"
+      - "locales/**"
+      - "packaging/**"
+      - "scripts/**"
+      - "vendor/**"
+      - "build.rs"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "about.toml"
+      - "about.hbs"
+      - ".github/workflows/build.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      PACKAGE: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            # Oldest supported glibc baseline.
+            os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - name: windows-x86_64
+            os: windows-2022
+            target: x86_64-pc-windows-msvc
+          # - name: macos-arm64
+          #   os: macos-14
+          #   target: aarch64-apple-darwin
+          # - name: macos-x86_64
+          #   os: macos-13
+          #   target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libasound2-dev libfontconfig-dev libfreetype-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libvulkan-dev libssl-dev \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev libjavascriptcoregtk-4.1-dev \
+            desktop-file-utils
+      - name: Validate version and tag
+        env:
+          RELEASE_REF: ${{ github.ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')"
+          echo "version=$version" >> "$GITHUB_ENV"
+          if [[ "$RELEASE_REF" == refs/tags/* ]]; then
+            if [[ "$RELEASE_REF" != "refs/tags/v$version" ]]; then
+              echo "Tag must be v$version for Cargo version $version" >&2
+              exit 1
+            fi
+            # Releases come from main (git flow release/hotfix finish).
+            status="$(gh api "repos/$GITHUB_REPOSITORY/compare/$GITHUB_SHA...main" --jq .status)"
+            if [[ "$status" != identical && "$status" != ahead ]]; then
+              echo "Tag ${RELEASE_REF#refs/tags/} is not on main (compare: $status)" >&2
+              exit 1
+            fi
+          fi
+      - name: Check and test
+        run: |
+          cargo fmt --all -- --check || echo "::warning::rustfmt reported differences"
+          cargo test --locked --workspace --target ${{ matrix.target }}
+      - name: Build release binaries
+        if: env.PACKAGE == 'true'
+        run: cargo build --locked --release --workspace --target ${{ matrix.target }}
+      - uses: taiki-e/install-action@v2
+        if: env.PACKAGE == 'true'
+        with:
+          tool: cargo-about
+      - name: Third-party licenses
+        if: env.PACKAGE == 'true'
+        run: cargo about generate about.hbs -o THIRD_PARTY_NOTICES.md
+      - name: Fetch AppImage tools
+        if: runner.os == 'Linux' && env.PACKAGE == 'true'
+        run: |
+          scripts/fetch-appimage-tools.sh
+          echo "APPIMAGETOOL=$PWD/build/tools/appimagetool-x86_64.AppImage" >> "$GITHUB_ENV"
+          echo "APPIMAGE_RUNTIME=$PWD/build/tools/runtime-x86_64" >> "$GITHUB_ENV"
+      - name: Package
+        if: env.PACKAGE == 'true'
+        run: scripts/package.sh "${{ matrix.target }}" "${{ matrix.name }}"
+      - name: Verify checksums
+        if: env.PACKAGE == 'true'
+        working-directory: dist
+        run: sha256sum -c ./*.sha256
+      - name: Start the packaged builds
+        if: env.PACKAGE == 'true'
+        run: |
+          case "${{ runner.os }}" in
+            Linux)
+              APPIMAGE_EXTRACT_AND_RUN=1 dist/Fono8-*-x86_64.AppImage --version
+              mkdir -p "$RUNNER_TEMP/tar" && tar -xzf dist/Fono8-*-linux-x86_64.tar.gz -C "$RUNNER_TEMP/tar"
+              "$RUNNER_TEMP"/tar/Fono8-*/bin/fono8 --version
+              test -f "$RUNNER_TEMP"/tar/Fono8-*/LICENSE && test -f "$RUNNER_TEMP"/tar/Fono8-*/THIRD_PARTY_NOTICES.md
+              ;;
+            Windows)
+              # A path with spaces and non-ASCII characters, outside the checkout.
+              dest="$RUNNER_TEMP/Próba Fono8"
+              mkdir -p "$dest" && 7z x -y -o"$dest" dist/Fono8-*-windows-x86_64.zip >/dev/null
+              test -f "$dest/Fono8/fono8.exe" && test -f "$dest/Fono8/fono8-web.exe"
+              test -f "$dest/Fono8/LICENSE" && test -f "$dest/Fono8/THIRD_PARTY_NOTICES.md"
+              # Windows subsystem: no console output, the exit code tells.
+              "$dest/Fono8/fono8.exe" --version
+              ;;
+          esac
+      - uses: actions/upload-artifact@v4
+        if: env.PACKAGE == 'true'
+        with:
+          name: fono8-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+
+  draft-release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fono8-*
+          merge-multiple: true
+          path: dist
+      - name: Create draft for manual release review
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          printf '%s\n' \
+            '**Linux x86_64**: download the AppImage, make it executable (`chmod +x`) and run it. On first start Fono8 adds itself to the application menu with its icon. The tar.gz contains the same program for manual installation.' \
+            '**Windows x64**: extract the entire ZIP and run `Fono8/fono8.exe` (keep `fono8-web.exe` next to it). The executable is not code-signed.' \
+            '' \
+            'Windows: Spotify playback and the Chromium engine for YouTube Music need the DevTools pipe, which is not supported on Windows yet; YouTube Music uses the WebView2 helper.' \
+            'Spotify needs Premium and your own Spotify developer app; TIDAL is an import source (matched tracks or 30-second previews). See README.md.' \
+            '' \
+            'Release candidate: complete the checklist in RELEASING.md before publishing.' \
+            > release-notes.md
+          gh release create "$RELEASE_TAG" dist/* --verify-tag \
+            --draft --prerelease --title "Fono8 $RELEASE_TAG" --notes-file release-notes.md

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Fono8
+Comment=A compact music player for local files
+Comment[pl]=Kompaktowy odtwarzacz muzyki lokalnej
+Exec=fono8
+Icon=fono8
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=music;audio;playlist;
+StartupWMClass=fono8
