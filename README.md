@@ -8,7 +8,7 @@ your **TIDAL** lists into the same library. It runs on Linux and Windows (macOS
 is on the way), feels fast thanks to a native Rust + GPUI interface, and sends
 no data anywhere except to the services you sign in to.
 
-![Home: recently played, playlists and the queue](docs/screens/fono8_home_view.png)
+![Home: recently played, playlists and the queue](docs/screens/home.webp)
 
 ### Highlights
 
@@ -27,11 +27,11 @@ no data anywhere except to the services you sign in to.
 - **Google Cast**, mini mode, sleep timer, system tray, keyboard shortcuts,
   English and Polish interface.
 
-![Discover: YouTube Music and Spotify results in one list](docs/screens/fono8_discovery_view.png)
+![Discover: YouTube Music and Spotify results in one list](docs/screens/discovery.webp)
 
-![My favorites: tracks from different services in one playlist](docs/screens/fono8_my_favorities_view.png)
+![My favorites: tracks from different services in one playlist](docs/screens/favorites.webp)
 
-![Settings → Accounts: YouTube Music, Spotify and TIDAL](docs/screens/fono8_settings_accounts_view.png)
+![Settings → Accounts: YouTube Music, Spotify and TIDAL](docs/screens/accounts.webp)
 
 Streaming accounts are connected in **Settings → Accounts**. Spotify needs a
 Premium account and the Client ID of your own app from the Spotify Developer
