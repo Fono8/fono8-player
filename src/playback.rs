@@ -78,6 +78,9 @@ remote_control!(SpotifyLink);
 pub enum PlaybackEvent {
     /// The TIDAL preview of this track must be downloaded first (then call `retry_current`).
     NeedsPreview(String),
+    /// The YouTube Music engine is not running yet: start it, then call `retry_current`.
+    /// Happens when the queue reaches a YouTube Music item on its own, e.g. after a Spotify track.
+    NeedsYouTube(String),
     TrackChanged(String),
     QueueChanged,
     StateChanged(PlaybackState),
@@ -429,8 +432,12 @@ impl Playback {
                 return;
             }
             let Some(link) = self.link(kind) else {
-                let key = if kind == Remote::YouTube { "yt_open_account" } else { "spotify_login_required" };
-                self.events.push(PlaybackEvent::Error(Message::new(key)));
+                // The YouTube Music engine starts on demand; Spotify's player exists once signed in.
+                let event = match kind {
+                    Remote::YouTube => PlaybackEvent::NeedsYouTube(path),
+                    Remote::Spotify => PlaybackEvent::Error(Message::new("spotify_login_required")),
+                };
+                self.events.push(event);
                 return;
             };
             let Some(id) = id else {
@@ -477,7 +484,7 @@ impl Playback {
         self.set_state(PlaybackState::Playing);
     }
 
-    /// Load the current item again (its TIDAL preview has arrived).
+    /// Load the current item again (its TIDAL preview has arrived or the YouTube Music engine started).
     pub fn retry_current(&mut self) {
         self.load();
     }
@@ -758,5 +765,21 @@ mod tests {
         assert_eq!(playback.current(), Some(TWO));
         playback.detach_spotify();
         assert!(playback.spotify.is_none() && !playback.playing());
+    }
+
+    #[test]
+    fn a_youtube_item_without_a_running_engine_asks_for_it_and_keeps_its_place() {
+        let mut playback = Playback::new();
+        let (link, _commands) = test_link();
+        playback.spotify = Some(link);
+        let video = "ytmusic:dQw4w9WgXcQ";
+        playback.start(vec![ONE.into(), video.into()], ONE);
+        playback.take_events();
+        playback.spotify_event(&PlayerEvent::Ended);
+        let events = playback.take_events();
+        assert!(events.iter().any(|e| matches!(e, PlaybackEvent::NeedsYouTube(p) if p == video)), "{events:?}");
+        assert!(!events.iter().any(|e| matches!(e, PlaybackEvent::Error(_))), "{events:?}");
+        assert_eq!(playback.current(), Some(video), "the item stays current for the retry");
+        assert!(!playback.playing());
     }
 }

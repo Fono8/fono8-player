@@ -464,6 +464,12 @@ impl Fono8 {
             match event {
                 PlaybackEvent::TrackChanged(path) => self.track_changed(&path),
                 PlaybackEvent::NeedsPreview(path) => self.fetch_preview(&path),
+                PlaybackEvent::NeedsYouTube(path) => {
+                    // Start the engine and play the same item; ensure_youtube reports its own failure.
+                    if self.playback.current() == Some(path.as_str()) && self.ensure_youtube() {
+                        self.playback.retry_current();
+                    }
+                }
                 PlaybackEvent::QueueChanged => {}
                 PlaybackEvent::StateChanged(state) => {
                     if let Some(tray) = self.tray.as_mut() {
