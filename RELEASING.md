@@ -18,13 +18,12 @@ What runs when:
 
 | Trigger | What runs |
 | --- | --- |
-| Pull request to `develop`, push to `develop` | `cargo test` on Linux and Windows, no packages |
-| Tag `v<version>` (git flow puts it on `main`) | tests, packages, draft release |
+| Pull request to `main`, push to `main` | `cargo test` on Linux and Windows, no packages |
+| Tag `v<version>` on `main` | tests, packages, draft release |
 | **Run workflow** (on demand) | tests and packages, no release |
 
-Pushes to `main` alone build nothing: `git flow release finish` / `hotfix finish`
-puts the release tag on `main`, and the tag push does the work. A tag whose
-commit is not on `main` stops the workflow. The packages are under
+Pushes to `main` run only the tests; the tag push builds the packages. A tag
+whose commit is not on `main` stops the workflow. The packages are under
 **Artifacts** of each run.
 
 ## Making a release

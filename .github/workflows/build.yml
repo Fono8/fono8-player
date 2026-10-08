@@ -1,7 +1,7 @@
 name: Desktop builds
 
-# Pull requests to develop and pushes to develop: tests on Linux and Windows.
-# A `v<version>` tag (git flow puts it on main) and manual runs: tests, then the
+# Pull requests to main and pushes to main: tests on Linux and Windows.
+# A `v<version>` tag on main and manual runs: tests, then the
 # Linux (tar.gz + AppImage) and Windows (ZIP) packages; a tag also creates a
 # draft release.
 # macOS: add the commented matrix entries below once a Mac build has been tested
@@ -10,10 +10,10 @@ name: Desktop builds
 on:
   workflow_dispatch:
   push:
-    branches: ["develop"]
+    branches: ["main"]
     tags: ["v*"]
   pull_request:
-    branches: ["develop"]
+    branches: ["main"]
     paths:
       - "src/**"
       - "ytm-core/**"
