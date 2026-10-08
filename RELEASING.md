@@ -39,7 +39,10 @@ whose commit is not on `main` stops the workflow. The packages are under
    ```
 
 3. When the workflow finishes, a **draft release** (prerelease) with all files
-   and release notes is waiting on GitHub.
+   and release notes is waiting on GitHub. The notes end with **What's
+   changed**: the commit subjects since the previous tag (without the
+   `chore(release)` bump), so write subjects that make sense to users. Edit the
+   list in the draft if needed.
 4. Check by hand before publishing:
    - Linux: the AppImage starts after `chmod +x`, after the first start Fono8 is
      in the application menu with its icon, a local file plays, the tray works.

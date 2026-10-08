@@ -170,6 +170,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Full history and tags, for the list of changes since the previous release.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           pattern: fono8-*
@@ -188,7 +192,17 @@ jobs:
             'Windows: Spotify playback and the Chromium engine for YouTube Music need the DevTools pipe, which is not supported on Windows yet; YouTube Music uses the WebView2 helper.' \
             'Spotify needs Premium and your own Spotify developer app; TIDAL is an import source (matched tracks or 30-second previews). See README.md.' \
             '' \
-            'Release candidate: complete the checklist in RELEASING.md before publishing.' \
+            "## What's changed" \
             > release-notes.md
+          # Commit subjects since the previous tag, without the version bump itself.
+          previous=$(git describe --tags --abbrev=0 "$RELEASE_TAG^" 2>/dev/null || true)
+          if [[ -n "$previous" ]]; then
+            git log --no-merges --format='- %s' "$previous..$RELEASE_TAG" \
+              | grep -vE '^- chore\(release\)' >> release-notes.md || true
+            printf '\n**Full changelog**: https://github.com/%s/compare/%s...%s\n' \
+              "$GH_REPO" "$previous" "$RELEASE_TAG" >> release-notes.md
+          else
+            echo '- First release.' >> release-notes.md
+          fi
           gh release create "$RELEASE_TAG" dist/* --verify-tag \
             --draft --prerelease --title "Fono8 $RELEASE_TAG" --notes-file release-notes.md
