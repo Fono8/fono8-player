@@ -4,7 +4,7 @@ default-members = [".", "fono8-web"]
 
 [package]
 name = "fono8"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Fono8 - a compact music player for local files, YouTube Music and Spotify"
 homepage = "https://fono8.com"
