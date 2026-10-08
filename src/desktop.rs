@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 
 const MARKER: &str = "X-Fono8-Generated=true";
 const SVG: &[u8] = include_bytes!("../assets/fono8.svg");
-const PNGS: &[(u32, &[u8])] = &[
+/// The application icon in the sizes installed into the icon theme (also used by the tray).
+pub(crate) const PNGS: &[(u32, &[u8])] = &[
     (16, include_bytes!("../assets/app-icon/fono8-16.png")),
     (24, include_bytes!("../assets/app-icon/fono8-24.png")),
     (32, include_bytes!("../assets/app-icon/fono8-32.png")),
