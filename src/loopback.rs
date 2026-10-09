@@ -124,6 +124,7 @@ impl Loopback {
     }
 
     /// The server for `port`, started on first use and shared by every service (port 0: a new one).
+    /// `done_text` comes from whichever service starts it first, so it must not name a service.
     pub fn shared(port: u16, done_text: String) -> Result<Arc<Loopback>, ()> {
         static SHARED: OnceLock<Mutex<HashMap<u16, Arc<Loopback>>>> = OnceLock::new();
         if port == 0 {

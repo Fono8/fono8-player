@@ -1125,7 +1125,7 @@ impl Fono8 {
                 Box::new(crate::net::Https::new(crate::spotify::HOSTS)),
                 Box::new(crate::keystore::Keyring { service: "spotify" }),
                 crate::spotify::PORT,
-                self.t("spotify_signed_in_page"),
+                self.t("signed_in_page"),
             ));
         }
         self.spotify.as_ref().unwrap()

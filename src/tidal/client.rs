@@ -448,7 +448,7 @@ mod tests {
             Box::new(crate::net::Https::new(super::super::HOSTS).accept("application/vnd.api+json")),
             Box::new(crate::keystore::Keyring { service: "tidal" }),
             43821,
-            "Fono8: TIDAL sign-in received, you can close this tab.".into(),
+            "Fono8: sign-in received. You can close this tab and return to Fono8.".into(),
         );
         let next = |what: &str| loop {
             match tidal.wait(Duration::from_secs(240)) {
