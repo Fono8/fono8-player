@@ -58,9 +58,65 @@ fn take_match(target: &str, routes: &Routes) -> Option<&'static str> {
     }
 }
 
+const APP_ICON_SVG: &str = include_str!("../assets/fono8.svg");
+const DONE_PAGE_POLICY: &str = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'";
+
+/// The page shown in the browser after a sign-in callback, in the style of fono8.com.
+/// Self-contained: inline styles and logo, no scripts and no requests.
+pub fn done_page(language: &str, title: &str, body: &str) -> String {
+    let (language, title, body) = (escape(language), escape(title), escape(body));
+    let icon = APP_ICON_SVG.replacen(r#" width="512" height="512""#, "", 1);
+    format!(
+        r#"<!doctype html>
+<html lang="{language}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Fono8 · {title}</title>
+<style>
+  :root {{ --bg: #07101e; --surface: #0e1a2c; --border: #24334b; --text: #e8f0ff; --muted: #9baecb;
+    --accent: #3de8f7; --purple: #9b6dff; --grad: linear-gradient(90deg, var(--accent), var(--purple));
+    --font: "Inter", "Ubuntu", "Noto Sans", "Cantarell", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; }}
+  * {{ box-sizing: border-box; }}
+  html, body {{ height: 100%; }}
+  body {{ margin: 0; display: grid; place-items: center; padding: 24px; color: var(--text);
+    font: 400 16px/1.6 var(--font); -webkit-font-smoothing: antialiased; background: var(--bg);
+    background-image: radial-gradient(900px 520px at 85% -120px, rgba(155, 109, 255, .16), transparent 70%),
+      radial-gradient(800px 500px at 0% 120px, rgba(61, 232, 247, .09), transparent 70%);
+    background-repeat: no-repeat; }}
+  main {{ width: min(440px, 100%); text-align: center; padding: 40px 32px 34px; border-radius: 14px;
+    background: rgba(14, 26, 44, .82); border: 1px solid var(--border); box-shadow: 0 24px 60px rgba(0, 0, 0, .35); }}
+  .icon {{ width: 76px; height: 76px; margin: 0 auto 22px; }}
+  .icon svg {{ width: 100%; height: 100%; display: block; }}
+  h1 {{ margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }}
+  .rule {{ width: 56px; height: 3px; margin: 14px auto 16px; border-radius: 3px; background: var(--grad); }}
+  p {{ margin: 0; color: var(--muted); }}
+  footer {{ margin-top: 22px; font-size: 13px; color: var(--muted); letter-spacing: .02em; }}
+  footer strong {{ background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }}
+</style>
+</head>
+<body>
+<main>
+  <div class="icon" aria-hidden="true">{icon}</div>
+  <h1>{title}</h1>
+  <div class="rule"></div>
+  <p>{body}</p>
+  <footer><strong>Fono8</strong></footer>
+</main>
+</body>
+</html>
+"#
+    )
+}
+
+fn escape(text: &str) -> String {
+    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+}
+
 impl Loopback {
     /// Listen on 127.0.0.1:`port` (0 picks a free port).
-    pub fn start(port: u16, done_text: String) -> Result<Loopback, ()> {
+    pub fn start(port: u16, done_page: String) -> Result<Loopback, ()> {
         let server = Arc::new(tiny_http::Server::http(SocketAddr::from((Ipv4Addr::LOCALHOST, port))).map_err(|_| ())?);
         let port = match server.server_addr() {
             tiny_http::ListenAddr::IP(addr) => addr.port(),
@@ -88,6 +144,7 @@ impl Loopback {
                     let target = request.url().to_string();
                     let host_ok =
                         request.headers().iter().filter(|h| h.field.equiv("Host")).map(|h| h.value.as_str()).eq([host.as_str()]);
+                    let mut page_policy = false;
                     let (status, mime, body): (u16, &str, Vec<u8>) =
                         if request.method() != &tiny_http::Method::Get || !host_ok || target.len() > MAX_TARGET {
                             (400, "text/plain", b"Invalid request.".to_vec())
@@ -101,11 +158,12 @@ impl Loopback {
                                     (route.on_callback)(target);
                                 }
                             }
-                            (200, "text/plain; charset=utf-8", done_text.clone().into_bytes())
+                            page_policy = true;
+                            (200, "text/html; charset=utf-8", done_page.clone().into_bytes())
                         } else {
                             (404, "text/plain", b"Not found.".to_vec())
                         };
-                    let headers = vec![
+                    let mut headers = vec![
                         header("Content-Type", mime),
                         header("Cache-Control", "no-store"),
                         header("Referrer-Policy", "no-referrer"),
@@ -113,6 +171,10 @@ impl Loopback {
                         header("X-Frame-Options", "DENY"),
                         header("Connection", "close"),
                     ];
+                    if page_policy {
+                        // The sign-in page is static: no scripts, no requests, no forms.
+                        headers.push(header("Content-Security-Policy", DONE_PAGE_POLICY));
+                    }
                     let length = body.len();
                     let response =
                         tiny_http::Response::new(tiny_http::StatusCode(status), headers, &body[..], Some(length), None);
@@ -124,17 +186,18 @@ impl Loopback {
     }
 
     /// The server for `port`, started on first use and shared by every service (port 0: a new one).
-    /// `done_text` comes from whichever service starts it first, so it must not name a service.
-    pub fn shared(port: u16, done_text: String) -> Result<Arc<Loopback>, ()> {
+    /// `done_page` (see [`done_page`]) comes from whichever service starts it first, so it must
+    /// not name a service.
+    pub fn shared(port: u16, done_page: String) -> Result<Arc<Loopback>, ()> {
         static SHARED: OnceLock<Mutex<HashMap<u16, Arc<Loopback>>>> = OnceLock::new();
         if port == 0 {
-            return Loopback::start(0, done_text).map(Arc::new);
+            return Loopback::start(0, done_page).map(Arc::new);
         }
         let mut servers = SHARED.get_or_init(|| Mutex::new(HashMap::new())).lock().map_err(|_| ())?;
         if let Some(server) = servers.get(&port).filter(|s| !s.closed.load(Ordering::Relaxed)) {
             return Ok(server.clone());
         }
-        let server = Arc::new(Loopback::start(port, done_text)?);
+        let server = Arc::new(Loopback::start(port, done_page)?);
         servers.insert(port, server.clone());
         Ok(server)
     }
@@ -196,6 +259,16 @@ mod tests {
     }
 
     #[test]
+    fn the_sign_in_page_is_static_escaped_html() {
+        let page = done_page("pl", "Logowanie <przyjęte>", "Możesz \"zamknąć\" kartę & wrócić.");
+        assert!(page.starts_with("<!doctype html>") && page.contains(r#"<html lang="pl">"#));
+        assert!(page.contains("<h1>Logowanie &lt;przyjęte&gt;</h1>"));
+        assert!(page.contains("Możesz &quot;zamknąć&quot; kartę &amp; wrócić."));
+        assert!(page.contains("<svg") && !page.contains(r#"width="512""#), "inline logo sized by CSS");
+        assert!(!page.contains("<script") && !page.contains("https://"), "no scripts, no external resources");
+    }
+
+    #[test]
     fn loopback_serves_only_capability_assets_and_valid_callbacks() {
         let server = Loopback::start(0, "Signed in.".into()).unwrap();
         let port = server.port();
@@ -226,6 +299,7 @@ mod tests {
         assert!(fetch(port, "/tidal/callback?state=s3cret&code=x", None).starts_with("HTTP/1.1 404"), "state of another route");
         let reply = fetch(port, "/callback?state=s3cret&code=one-time", None);
         assert!(reply.starts_with("HTTP/1.1 200") && reply.ends_with("Signed in."), "{reply}");
+        assert!(reply.contains("Content-Type: text/html") && reply.contains("Content-Security-Policy: default-src 'none'"));
         assert!(!reply.contains("one-time") && !reply.contains("s3cret"));
         assert_eq!(spotify_received.recv_timeout(Duration::from_secs(2)).unwrap(), "/callback?state=s3cret&code=one-time");
         assert!(fetch(port, "/callback?state=s3cret&code=one-time", None).starts_with("HTTP/1.1 404"), "replay");

@@ -1119,13 +1119,18 @@ impl Fono8 {
     }
 
     /// The Spotify worker, started on first use.
+    /// The browser page shown after signing in to a streaming service (shared by all of them).
+    pub fn signed_in_page(&self) -> String {
+        crate::loopback::done_page(self.i18n.language, &self.t("signed_in_title"), &self.t("signed_in_body"))
+    }
+
     pub fn spotify_client(&mut self) -> &Spotify {
         if self.spotify.is_none() {
             self.spotify = Some(Spotify::start(
                 Box::new(crate::net::Https::new(crate::spotify::HOSTS)),
                 Box::new(crate::keystore::Keyring { service: "spotify" }),
                 crate::spotify::PORT,
-                self.t("signed_in_page"),
+                self.signed_in_page(),
             ));
         }
         self.spotify.as_ref().unwrap()
