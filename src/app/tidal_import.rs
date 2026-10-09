@@ -41,7 +41,7 @@ impl Fono8 {
                 Box::new(crate::net::Https::new(crate::tidal::HOSTS).accept("application/vnd.api+json")),
                 Box::new(crate::keystore::Keyring { service: "tidal" }),
                 crate::spotify::PORT,
-                self.t("tidal_signed_in_page"),
+                self.signed_in_page(),
             ));
         }
         self.tidal.as_ref().unwrap()
