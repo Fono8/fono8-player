@@ -30,7 +30,7 @@ dirs = "7"
 walkdir = "2"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif", "bmp"] }
 anyhow = "1"
-rand = "0.9"
+rand = "0.10"
 sys-locale = "0.3"
 smallvec = "1"
 unicode-segmentation = "1"
@@ -44,8 +44,8 @@ fono8-ytm-core = { path = "ytm-core" }
 # YouTube Music thumbnails, Spotify Web API
 ureq = { version = "3", default-features = false, features = ["rustls"] }
 # Spotify: PKCE sign-in, refresh token in the system keyring
-sha2 = "0.10"
-base64 = "0.22"
+sha2 = "0.11"
+base64 = "0.23"
 url = "2"
 form_urlencoded = "1"
 keyring = "4"
