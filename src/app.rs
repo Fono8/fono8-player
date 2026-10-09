@@ -51,6 +51,25 @@ pub const COMPACT_SIZE: (f32, f32) = (440.0, 210.0);
 pub const MIN_COMPACT: (f32, f32) = (420.0, 210.0);
 pub const MAX_COMPACT: (f32, f32) = (640.0, 280.0);
 
+/// Whether GPUI drives the window through Wayland (its own rule in `guess_compositor`).
+fn on_wayland() -> bool {
+    cfg!(target_os = "linux")
+        && std::env::var_os("ZED_HEADLESS").is_none()
+        && std::env::var_os("WAYLAND_DISPLAY").is_some_and(|display| !display.is_empty())
+}
+
+/// Where to open the window. Wayland clients cannot place their windows, and GPUI 0.2
+/// reuses the origin as the window geometry offset in `Window::resize`: an origin of
+/// (120, 80) made GNOME shrink a 440x210 mini window to 320x130 at the next configure
+/// (e.g. when the window lost focus). So the origin is zero there.
+fn window_origin(saved: Option<Point<Pixels>>, wayland: bool) -> Point<Pixels> {
+    if wayland {
+        Point::default()
+    } else {
+        saved.unwrap_or(Point { x: px(120.0), y: px(80.0) })
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Page {
     Home,
@@ -594,8 +613,7 @@ impl Fono8 {
 
     pub fn window_bounds(&self) -> Bounds<Pixels> {
         let size = if self.compact { self.window_state.compact_size } else { self.window_state.full_size };
-        let origin = self.window_state.origin.unwrap_or(Point { x: px(120.0), y: px(80.0) });
-        Bounds { origin, size }
+        Bounds { origin: window_origin(self.window_state.origin, on_wayland()), size }
     }
 
     pub fn record_window_bounds(&mut self, bounds: Bounds<Pixels>, maximized: bool) {
@@ -2858,4 +2876,18 @@ fn pick_font(cx: &gpui::App) -> String {
         }
     }
     available.first().cloned().unwrap_or_else(|| "sans-serif".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_window_opens_at_origin_zero_on_wayland() {
+        let saved = Some(Point { x: px(300.0), y: px(200.0) });
+        assert_eq!(window_origin(saved, true), Point::default());
+        assert_eq!(window_origin(None, true), Point::default());
+        assert_eq!(window_origin(saved, false), Point { x: px(300.0), y: px(200.0) });
+        assert_eq!(window_origin(None, false), Point { x: px(120.0), y: px(80.0) });
+    }
 }
