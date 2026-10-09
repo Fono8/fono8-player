@@ -278,7 +278,7 @@
   "spotify_autoplay_error": "Spotify blocked automatic playback. Choose Resume to try again.",
   "spotify_browser_failed": "Could not open the browser for Spotify sign-in.",
   "spotify_browser_missing": "No browser with Widevine was found. Install Google Chrome, Microsoft Edge or Brave to play Spotify in Fono8 (FONO8_BROWSER can point to one).",
-  "spotify_cast_active": "Spotify tracks cannot be sent through Fono8 Cast. Return playback to this computer to play them.",
+  "spotify_cast_soon": "Spotify plays on this computer for now. Casting it to a speaker is coming soon.",
   "spotify_change_account": "Change account",
   "spotify_client_id_hint": "Client ID of your Spotify app (32 characters)",
   "spotify_client_invalid": "Enter the 32-character Client ID from Spotify Developer Dashboard.",

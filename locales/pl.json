@@ -280,7 +280,7 @@
   "spotify_autoplay_error": "Spotify zablokowało automatyczne odtwarzanie. Wybierz Wznów, aby spróbować ponownie.",
   "spotify_browser_failed": "Nie udało się otworzyć przeglądarki do logowania Spotify.",
   "spotify_browser_missing": "Nie znaleziono przeglądarki z Widevine. Zainstaluj Google Chrome, Microsoft Edge lub Brave, aby odtwarzać Spotify w Fono8 (FONO8_BROWSER może wskazać konkretną).",
-  "spotify_cast_active": "Utworów Spotify nie można przesyłać przez Fono8 Cast. Przełącz odtwarzanie na ten komputer, aby je odtworzyć.",
+  "spotify_cast_soon": "Spotify gra na razie na tym komputerze. Wysyłanie na głośnik pojawi się wkrótce.",
   "spotify_change_account": "Zmień konto",
   "spotify_client_id_hint": "Client ID Twojej aplikacji Spotify (32 znaki)",
   "spotify_client_invalid": "Wpisz 32-znakowy Client ID z Spotify Developer Dashboard.",

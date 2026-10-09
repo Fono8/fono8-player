@@ -51,6 +51,14 @@ pub const COMPACT_SIZE: (f32, f32) = (440.0, 210.0);
 pub const MIN_COMPACT: (f32, f32) = (420.0, 210.0);
 pub const MAX_COMPACT: (f32, f32) = (640.0, 280.0);
 
+/// The note shown when a streaming track plays on this computer during a Cast session.
+pub fn cast_soon_key(remote: Remote) -> &'static str {
+    match remote {
+        Remote::YouTube => "yt_cast_soon",
+        Remote::Spotify => "spotify_cast_soon",
+    }
+}
+
 /// Whether GPUI drives the window through Wayland (its own rule in `guess_compositor`).
 fn on_wayland() -> bool {
     cfg!(target_os = "linux")
@@ -290,8 +298,8 @@ pub struct Fono8 {
     pending_window_save: Option<Instant>,
     last_tray_song: String,
     last_cast_message: Message,
-    /// A YouTube Music track plays while Cast is active (it stays on this computer).
-    youtube_beside_cast: bool,
+    /// The streaming service whose track plays while Cast is active (it stays on this computer).
+    remote_beside_cast: Option<Remote>,
 }
 
 fn validate_size(value: Option<&Value>, default: (f32, f32)) -> Size<Pixels> {
@@ -393,7 +401,7 @@ impl Fono8 {
             pending_window_save: None,
             last_tray_song: String::new(),
             last_cast_message: Message::new("cast_local"),
-            youtube_beside_cast: false,
+            remote_beside_cast: None,
         };
         this.youtube.forget_pending = this.library.setting_bool("yt_forget_pending", false);
         this.tray = Tray::start(this.tray_texts(), this.playback.engine.levels());
@@ -587,13 +595,13 @@ impl Fono8 {
                 self.set_status(status.message);
             }
         }
-        // Cast only carries audio decoded by Fono8; say so once when YouTube Music meets Cast.
-        let youtube_beside_cast = self.youtube_beside_cast();
-        if youtube_beside_cast && !self.youtube_beside_cast {
-            self.set_status(Message::new("yt_cast_soon"));
+        // Cast only carries audio decoded by Fono8; say so once when a streaming track meets Cast.
+        let remote_beside_cast = self.remote_beside_cast();
+        if let Some(remote) = remote_beside_cast.filter(|_| remote_beside_cast != self.remote_beside_cast) {
+            self.set_status(Message::new(cast_soon_key(remote)));
             changed = true;
         }
-        self.youtube_beside_cast = youtube_beside_cast;
+        self.remote_beside_cast = remote_beside_cast;
         if let Some(when) = self.pending_window_save {
             if when.elapsed() >= Duration::from_millis(250) {
                 self.pending_window_save = None;
@@ -2249,16 +2257,16 @@ impl Fono8 {
         self.update_tray_song();
     }
 
-    /// Whether a YouTube Music track is current while audio goes to a Cast device.
-    pub fn youtube_beside_cast(&self) -> bool {
-        self.playback.casting && self.playback.current_remote() == Some(Remote::YouTube)
+    /// The streaming service of the current track while audio goes to a Cast device.
+    pub fn remote_beside_cast(&self) -> Option<Remote> {
+        self.playback.current_remote().filter(|_| self.playback.casting)
     }
 
     fn track_changed(&mut self, path: &str) {
         let Some(track) = self.library.track(path) else { return };
         self.playback.set_duration_hint(track.duration);
         let status = match crate::playback::remote_kind(path) {
-            Some(Remote::YouTube) if self.playback.casting => "yt_cast_soon",
+            Some(remote) if self.playback.casting => cast_soon_key(remote),
             Some(Remote::YouTube) => "yt_playing",
             Some(Remote::Spotify) => "spotify_playing",
             None if crate::tidal::is_track_path(path) => "tidal_playing_preview",

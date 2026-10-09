@@ -181,7 +181,8 @@ and are never stored. Without PipeWire the logo shows a generic wave.
 Search, your playlists (owned and collaborative – the only ones Spotify shares
 with development-mode apps) and liked songs are in **Discover → Spotify**.
 Covers come from Spotify's public oEmbed endpoint. Spotify tracks cannot be sent
-through Fono8 Cast (DRM). Spotify playback does not work on Windows yet (no
+through Fono8 Cast yet (coming soon): during a Cast session they play on this
+computer, and Fono8 says so. Spotify playback does not work on Windows yet (no
 DevTools pipe there).
 
 ## Import from TIDAL

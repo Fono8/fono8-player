@@ -427,10 +427,6 @@ impl Playback {
                 Remote::YouTube => video_id(&path).ok(),
                 Remote::Spotify => crate::spotify::track_id(&path).map(str::to_string),
             };
-            if kind == Remote::Spotify && self.casting {
-                self.error(Message::new("spotify_cast_active"));
-                return;
-            }
             let Some(link) = self.link(kind) else {
                 // The YouTube Music engine starts on demand; Spotify's player exists once signed in.
                 let event = match kind {
@@ -749,15 +745,15 @@ mod tests {
     }
 
     #[test]
-    fn spotify_cannot_be_cast_and_a_broken_track_is_skipped() {
+    fn spotify_plays_on_this_computer_while_casting_and_a_broken_track_is_skipped() {
         let mut playback = Playback::new();
         let (link, commands) = test_link();
         playback.spotify = Some(link);
         playback.casting = true;
         playback.start(vec![ONE.into(), TWO.into()], ONE);
-        let reported = errors(&mut playback);
-        assert!(reported.iter().all(|key| *key == "spotify_cast_active") && reported.len() == 2, "{reported:?}");
-        assert!(!commands.try_iter().any(|c| matches!(c, Command::Load { .. })));
+        assert_eq!(errors(&mut playback), Vec::<&str>::new(), "no error and no skip while casting");
+        assert!(commands.try_iter().any(|c| c == Command::Load { uri: ONE.into() }));
+        assert_eq!(playback.current(), Some(ONE));
 
         playback.casting = false;
         playback.start(vec![ONE.into(), TWO.into()], ONE);

@@ -2603,7 +2603,7 @@ impl MainView {
         let status = m.cast_status();
         let message = m.i18n.message(&status.message);
         let connected = status.state == CastState::Connected;
-        let youtube_soon = (connected && m.youtube_beside_cast()).then(|| m.t("yt_cast_soon"));
+        let remote_soon = m.remote_beside_cast().filter(|_| connected).map(|remote| m.t(crate::app::cast_soon_key(remote)));
         let t = |key: &str| m.t(key);
         let texts = (
             t("cast_title"),
@@ -2649,7 +2649,7 @@ impl MainView {
                 .line_clamp(if compact { 2 } else { 4 })
                 .child(message),
         );
-        if let Some(text) = youtube_soon {
+        if let Some(text) = remote_soon {
             body = body.child(
                 div().flex_shrink_0().text_size(px(theme::TEXT_DETAIL)).text_color(theme::PURPLE).line_clamp(3).child(text),
             );
