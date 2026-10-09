@@ -70,7 +70,7 @@ jobs:
           #   os: macos-13
           #   target: x86_64-apple-darwin
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
@@ -154,7 +154,7 @@ jobs:
               "$dest/Fono8/fono8.exe" --version
               ;;
           esac
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: env.PACKAGE == 'true'
         with:
           name: fono8-${{ matrix.name }}
@@ -171,10 +171,10 @@ jobs:
       contents: write
     steps:
       # Full history and tags, for the list of changes since the previous release.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: fono8-*
           merge-multiple: true
