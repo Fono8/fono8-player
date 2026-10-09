@@ -6,7 +6,8 @@
 # Linux   -> Fono8-<version>-<name>.tar.gz (binary, .desktop, icons, README, LICENSE)
 #            and Fono8-<version>-x86_64.AppImage when APPIMAGETOOL and APPIMAGE_RUNTIME
 #            point to the tools from scripts/fetch-appimage-tools.sh
-# macOS   -> Fono8-<version>-<name>.dmg containing Fono8.app (ad-hoc signed)
+# macOS   -> Fono8-<version>-<name>.dmg with Fono8.app (ad-hoc signed, LICENSE and
+#            notices in Contents/Resources) and a link to /Applications
 # Windows -> Fono8-<version>-<name>.zip (fono8.exe, fono8-web.exe, README, LICENSE)
 # Every package carries LICENSE (GPL-3.0-or-later) and, when generated with
 # `cargo about generate about.hbs -o THIRD_PARTY_NOTICES.md`, the dependency licenses.
@@ -59,11 +60,14 @@ case "$target" in
     ;;
   *-apple-darwin)
     bin="$root/target/$target/release/fono8"
-    app="$stage/Fono8.app"
+    volume="$stage/volume"
+    app="$volume/Fono8.app"
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
     cp "$bin" "$app/Contents/MacOS/fono8"
     cp "$root/target/$target/release/fono8-web" "$app/Contents/MacOS/fono8-web"
     sed "s/__VERSION__/$version/g" "$root/packaging/Info.plist" > "$app/Contents/Info.plist"
+    cp "$root/README.md" "$root/LICENSE" "$app/Contents/Resources/"
+    [ -f "$root/THIRD_PARTY_NOTICES.md" ] && cp "$root/THIRD_PARTY_NOTICES.md" "$app/Contents/Resources/"
     iconset="$stage/fono8.iconset"
     mkdir -p "$iconset"
     for size in 16 32 128 256 512; do
@@ -74,8 +78,10 @@ case "$target" in
     iconutil -c icns "$iconset" -o "$app/Contents/Resources/fono8.icns"
     # Ad-hoc signature so Gatekeeper at least sees a consistent bundle; notarization is a later step.
     codesign --force --deep --sign - "$app"
+    # Drag-and-drop install: the volume shows Fono8.app next to a link to /Applications.
+    ln -s /Applications "$volume/Applications"
     rm -f "$dist/Fono8-$version-$name.dmg"
-    hdiutil create -volname "Fono8" -srcfolder "$app" -ov -format UDZO "$dist/Fono8-$version-$name.dmg"
+    hdiutil create -volname "Fono8" -srcfolder "$volume" -ov -format UDZO "$dist/Fono8-$version-$name.dmg"
     ;;
   *-windows-*)
     bin="$root/target/$target/release/fono8.exe"
@@ -97,7 +103,8 @@ esac
   cd "$dist"
   for file in Fono8-"$version"-*; do
     case "$file" in *.sha256) continue ;; esac
-    sha256sum "$file" > "$file.sha256"
+    # macOS has no sha256sum; shasum -a 256 prints the same "<hash>  <file>" line.
+    if command -v sha256sum >/dev/null; then sha256sum "$file"; else shasum -a 256 "$file"; fi > "$file.sha256"
   done
 )
 ls -la "$dist"
