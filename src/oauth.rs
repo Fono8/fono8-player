@@ -6,7 +6,6 @@ use std::time::{Duration, Instant};
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
-use rand::RngCore;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
@@ -52,7 +51,7 @@ pub fn pkce_challenge(verifier: &str) -> String {
 
 fn random_token(bytes: usize) -> String {
     let mut buffer = vec![0u8; bytes];
-    rand::rng().fill_bytes(&mut buffer);
+    rand::fill(&mut buffer);
     URL_SAFE_NO_PAD.encode(buffer)
 }
 
