@@ -304,6 +304,12 @@ impl MainView {
         }
     }
 
+    /// Leave the mini player for the full window and maximize it.
+    fn maximize_from_compact(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.update_model(cx, |m, _| m.window_state.maximized = true);
+        self.toggle_compact(window, cx);
+    }
+
     fn hide_to_tray(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let available = self.model.read(cx).tray_available();
         let bounds = window.bounds();
@@ -718,18 +724,25 @@ impl MainView {
             .pr(px(10.))
             .gap(px(8.))
             .window_control_area(WindowControlArea::Drag)
-            .on_mouse_down(MouseButton::Left, |event: &MouseDownEvent, window, cx| {
-                if cfg!(target_os = "linux") {
-                    if event.click_count == 2 {
-                        window.zoom_window();
-                    } else {
-                        window.start_window_move();
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, event: &MouseDownEvent, window, cx| {
+                    if event.click_count == 2 && this.model.read(cx).compact {
+                        // Maximizing the mini player would stretch its layout: go back to the
+                        // full window, maximized.
+                        this.maximize_from_compact(window, cx);
+                    } else if cfg!(target_os = "linux") {
+                        if event.click_count == 2 {
+                            window.zoom_window();
+                        } else {
+                            window.start_window_move();
+                        }
+                    } else if event.click_count == 2 {
+                        window.titlebar_double_click();
                     }
-                } else if event.click_count == 2 {
-                    window.titlebar_double_click();
-                }
-                cx.stop_propagation();
-            })
+                    cx.stop_propagation();
+                }),
+            )
             .child(brand((!brand_animated(m)).then(|| brand_bars(BrandPose::Still))));
         if !compact {
             if !narrow {
