@@ -538,8 +538,8 @@ impl Library {
         let tx = self.db.transaction()?;
         Self::save_remote_tracks(&tx, tracks)?;
         if let Some(playlist) = playlist {
-            let mut paths = playlist_paths(&tx, playlist)?;
-            paths.extend(tracks.iter().map(|t| t.path.clone()));
+            let added: Vec<String> = tracks.iter().map(|t| t.path.clone()).collect();
+            let paths = with_added_on_top(&playlist_paths(&tx, playlist)?, &added);
             replace_entries(&tx, playlist, &paths)?;
         }
         tx.commit()?;
@@ -583,10 +583,10 @@ impl Library {
         Ok(())
     }
 
+    /// Add tracks at the top of a playlist (newest first), see [`with_added_on_top`].
     pub fn add(&mut self, playlist: i64, paths: &[String]) -> Result<()> {
-        let mut all: Vec<String> = self.tracks(Some(playlist)).into_iter().map(|t| t.path).collect();
-        all.extend(paths.iter().cloned());
-        self.reorder(playlist, &all)
+        let existing: Vec<String> = self.tracks(Some(playlist)).into_iter().map(|t| t.path).collect();
+        self.reorder(playlist, &with_added_on_top(&existing, paths))
     }
 
     pub fn remove(&mut self, playlist: i64, paths: &[String]) -> Result<()> {
@@ -705,6 +705,15 @@ pub fn format_duration(seconds: f64) -> String {
 pub fn format_clock(ms: u64) -> String {
     let t = ms / 1000;
     format!("{}:{:02}", t / 60, t % 60)
+}
+
+/// The order of a playlist after adding `added`: the added tracks first, in the given
+/// order, then the rest as before. A track that was already in the playlist moves up.
+fn with_added_on_top(existing: &[String], added: &[String]) -> Vec<String> {
+    let mut seen = HashSet::new();
+    let mut order: Vec<String> = added.iter().filter(|p| seen.insert(p.as_str())).cloned().collect();
+    order.extend(existing.iter().filter(|p| !seen.contains(p.as_str())).cloned());
+    order
 }
 
 #[cfg(test)]
@@ -845,7 +854,21 @@ pub(crate) mod tests {
         lib.add(id, &[local.path.clone()]).unwrap();
         lib.add_remote_tracks(&[remote("zzzzzzzzzzz")], Some(id)).unwrap();
         let paths: Vec<String> = lib.tracks(Some(id)).into_iter().map(|t| t.path).collect();
-        assert_eq!(paths, vec!["ytmusic:abcdefghijk", "ytmusic:lmnopqrstuv", local.path.as_str(), "ytmusic:zzzzzzzzzzz"]);
+        // Added tracks go to the top, newest first.
+        assert_eq!(paths, vec!["ytmusic:zzzzzzzzzzz", local.path.as_str(), "ytmusic:abcdefghijk", "ytmusic:lmnopqrstuv"]);
+    }
+
+    #[test]
+    fn added_tracks_go_to_the_top_in_their_order() {
+        let list = |items: &[&str]| items.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(with_added_on_top(&list(&["a", "b"]), &list(&["x", "y"])), list(&["x", "y", "a", "b"]));
+        assert_eq!(
+            with_added_on_top(&list(&["a", "b", "c"]), &list(&["c"])),
+            list(&["c", "a", "b"]),
+            "an existing track moves up"
+        );
+        assert_eq!(with_added_on_top(&list(&["a"]), &list(&["x", "x"])), list(&["x", "a"]), "no duplicates");
+        assert_eq!(with_added_on_top(&[], &list(&["x"])), list(&["x"]));
     }
 
     #[test]
