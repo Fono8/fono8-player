@@ -30,5 +30,11 @@
     <true/>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.music</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Fono8 finds Google Cast speakers on your network and streams music to them.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_googlecast._tcp</string>
+    </array>
 </dict>
 </plist>
