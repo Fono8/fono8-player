@@ -1,0 +1,29 @@
+# Dependency updates (Dependabot). Security updates are enabled in the repository
+# settings and open a pull request as soon as an advisory affects a dependency.
+# Version updates are grouped into one pull request per ecosystem and month, so
+# they arrive in a few reviewable PRs instead of one per crate.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      cargo-compatible:
+        patterns: ["*"]
+        update-types: [minor, patch]
+      cargo-major:
+        patterns: ["*"]
+        update-types: [major]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns: ["*"]
