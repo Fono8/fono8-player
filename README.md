@@ -206,8 +206,10 @@ listed after the import.
 
 ## Not supported
 
-- **Cast for YouTube Music** – in-process capture only covers files decoded by
-  Fono8; online tracks play in the helper's browser.
+- **Cast for YouTube Music** (coming soon) – in-process capture only covers
+  files decoded by Fono8; online tracks play in the helper's browser and stay on
+  this computer while casting. Fono8 says so in the status bar and the Cast
+  panel.
 - **Opus and WMA** – `symphonia` cannot decode them; the files are cataloged,
   playback reports an error and moves on.
 - **Hiding to the tray on Wayland**: GPUI quits when the last window disappears,

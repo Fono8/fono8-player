@@ -145,6 +145,7 @@
   "yt_save_error": "Could not save the import. The existing library is unchanged.",
   "yt_playback_error": "YouTube Music could not start this track. Open Account and web player to check sign-in, consent and availability.",
   "yt_playing": "YouTube Music · online playback",
+  "yt_cast_soon": "YouTube Music plays on this computer for now. Casting it to a speaker is coming soon.",
   "reset_window_layout": "Reset window layout",
   "window_layout_reset": "Default window layout restored.",
   "yt_navigation_blocked": "Fono8 blocked a redirect to: {host} ({reason}). Sign-in may be incomplete.",

@@ -290,6 +290,8 @@ pub struct Fono8 {
     pending_window_save: Option<Instant>,
     last_tray_song: String,
     last_cast_message: Message,
+    /// A YouTube Music track plays while Cast is active (it stays on this computer).
+    youtube_beside_cast: bool,
 }
 
 fn validate_size(value: Option<&Value>, default: (f32, f32)) -> Size<Pixels> {
@@ -391,6 +393,7 @@ impl Fono8 {
             pending_window_save: None,
             last_tray_song: String::new(),
             last_cast_message: Message::new("cast_local"),
+            youtube_beside_cast: false,
         };
         this.youtube.forget_pending = this.library.setting_bool("yt_forget_pending", false);
         this.tray = Tray::start(this.tray_texts(), this.playback.engine.levels());
@@ -584,6 +587,13 @@ impl Fono8 {
                 self.set_status(status.message);
             }
         }
+        // Cast only carries audio decoded by Fono8; say so once when YouTube Music meets Cast.
+        let youtube_beside_cast = self.youtube_beside_cast();
+        if youtube_beside_cast && !self.youtube_beside_cast {
+            self.set_status(Message::new("yt_cast_soon"));
+            changed = true;
+        }
+        self.youtube_beside_cast = youtube_beside_cast;
         if let Some(when) = self.pending_window_save {
             if when.elapsed() >= Duration::from_millis(250) {
                 self.pending_window_save = None;
@@ -2239,10 +2249,16 @@ impl Fono8 {
         self.update_tray_song();
     }
 
+    /// Whether a YouTube Music track is current while audio goes to a Cast device.
+    pub fn youtube_beside_cast(&self) -> bool {
+        self.playback.casting && self.playback.current_remote() == Some(Remote::YouTube)
+    }
+
     fn track_changed(&mut self, path: &str) {
         let Some(track) = self.library.track(path) else { return };
         self.playback.set_duration_hint(track.duration);
         let status = match crate::playback::remote_kind(path) {
+            Some(Remote::YouTube) if self.playback.casting => "yt_cast_soon",
             Some(Remote::YouTube) => "yt_playing",
             Some(Remote::Spotify) => "spotify_playing",
             None if crate::tidal::is_track_path(path) => "tidal_playing_preview",

@@ -147,6 +147,7 @@
   "yt_save_error": "Nie udało się zapisać importu. Istniejąca biblioteka pozostaje bez zmian.",
   "yt_playback_error": "YouTube Music nie uruchomił utworu. Otwórz Konto i odtwarzacz WWW, aby sprawdzić logowanie, zgody i dostępność.",
   "yt_playing": "YouTube Music · odtwarzanie online",
+  "yt_cast_soon": "YouTube Music gra na razie na tym komputerze. Wysyłanie na głośnik pojawi się wkrótce.",
   "reset_window_layout": "Przywróć domyślny układ okna",
   "window_layout_reset": "Przywrócono domyślny układ okna.",
   "yt_navigation_blocked": "Fono8 zablokowało przekierowanie do: {host} ({reason}). Logowanie może być nieukończone.",
