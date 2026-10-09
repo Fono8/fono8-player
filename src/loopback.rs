@@ -11,7 +11,6 @@ use std::time::Duration;
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
-use rand::RngCore;
 
 const PLAYER_HTML: &[u8] = include_bytes!("../assets/spotify/player.html");
 const PLAYER_JS: &[u8] = include_bytes!("../assets/spotify/player.js");
@@ -124,7 +123,7 @@ impl Loopback {
             _ => return Err(()),
         };
         let mut random = [0u8; 24];
-        rand::rng().fill_bytes(&mut random);
+        rand::fill(&mut random);
         let player_path = format!("/player/{}", URL_SAFE_NO_PAD.encode(random));
         let closed = Arc::new(AtomicBool::new(false));
         let routes: Routes = Arc::new(Mutex::new(HashMap::new()));
