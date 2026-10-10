@@ -72,7 +72,7 @@ fn parse_args() -> Result<Args, String> {
         match arg.as_str() {
             "-h" | "--help" => show_help = true,
             "--version" => {
-                println!("Fono8 {}", env!("CARGO_PKG_VERSION"));
+                println!("Fono8 {}", crate::app::version_label());
                 std::process::exit(0);
             }
             "--data-dir" => args.data_dir = iter.next().map(PathBuf::from),
