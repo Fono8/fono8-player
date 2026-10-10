@@ -831,7 +831,7 @@ mod tests {
     }
 
     #[test]
-    fn navigation_policy_matches_the_qt_build() {
+    fn navigation_policy_allows_only_google_and_youtube_hosts() {
         assert_eq!(navigation_error("https://music.youtube.com/watch?v=abc"), None);
         assert_eq!(navigation_error("https://accounts.google.com/signin"), None);
         assert_eq!(navigation_error("about:blank"), None);
