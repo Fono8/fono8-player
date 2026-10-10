@@ -756,7 +756,7 @@ impl Fono8 {
         if self.youtube.login.is_some() {
             return;
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
             let chromium =
                 self.youtube.session.as_ref().map(|s| s.kind == crate::youtube::session::EngineKind::Chromium).unwrap_or(false)
@@ -775,7 +775,7 @@ impl Fono8 {
     }
 
     /// Sign in through a plain browser window; the controlled session restarts when it closes.
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn chromium_login(&mut self) {
         let Some(browser) = crate::youtube::chromium::find_browser() else {
             self.set_status(Message::new("yt_browser_error"));
@@ -802,7 +802,7 @@ impl Fono8 {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn youtube_profile_dir_for_browser(&self) -> PathBuf {
         match crate::youtube::chromium::find_browser() {
             Some(browser) => crate::youtube::chromium::profile_dir_for(&browser, &self.youtube_profile_dir()),
@@ -813,7 +813,7 @@ impl Fono8 {
     /// "I'm signed in": close the plain browser window and resume the controlled session.
     pub fn youtube_finish_login(&mut self) {
         self.youtube.login_detected = None;
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         if let Some(mut child) = self.youtube.login.take() {
             crate::youtube::chromium::finish_login(&mut child);
             self.youtube.message = Message::new("yt_intro");
@@ -831,7 +831,7 @@ impl Fono8 {
         if self.youtube.login.is_none() {
             return false;
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
             let now = Instant::now();
             if self.youtube.login_detected.is_none()

@@ -1,7 +1,7 @@
 //! Experimental YouTube Music integration: a helper process hosts the web
 //! session; Fono8 keeps the mixed queue, the imported playlists and this panel state.
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 pub mod chromium;
 pub mod models;
 pub mod provider;

@@ -103,13 +103,13 @@ pub struct Session {
 }
 
 /// Which engine to use: `FONO8_YTM_ENGINE=webkit|helper|chromium` overrides the default
-/// (Chromium when a browser is installed on Linux, the helper elsewhere).
+/// (Chromium when a browser is installed on Linux or macOS, the helper elsewhere).
 pub fn preferred_engine() -> EngineKind {
     match std::env::var("FONO8_YTM_ENGINE").unwrap_or_default().to_ascii_lowercase().as_str() {
         "chromium" | "chrome" => EngineKind::Chromium,
         "webkit" | "helper" | "wry" => EngineKind::Helper,
         _ => {
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             {
                 if super::chromium::find_browser().is_some() {
                     return EngineKind::Chromium;
@@ -123,13 +123,13 @@ pub fn preferred_engine() -> EngineKind {
 impl Session {
     /// `levels` receives the page's band levels while YouTube Music plays (the animated logo).
     pub fn spawn(profile_dir: &Path, i18n: &Translator, levels: Levels) -> Result<Session, &'static str> {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         let session = match preferred_engine() {
             EngineKind::Chromium => Self::spawn_chromium(profile_dir, i18n, levels.clone())
                 .or_else(|_| Self::spawn_helper(profile_dir, i18n, levels))?,
             EngineKind::Helper => Self::spawn_helper(profile_dir, i18n, levels)?,
         };
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         let session = {
             let _ = preferred_engine();
             Self::spawn_helper(profile_dir, i18n, levels)?
@@ -170,7 +170,7 @@ impl Session {
         })
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn spawn_chromium(profile_dir: &Path, i18n: &Translator, levels: Levels) -> Result<Session, &'static str> {
         let browser = super::chromium::find_browser().ok_or("yt_browser_error")?;
         let profile = super::chromium::profile_dir_for(&browser, profile_dir);
@@ -372,7 +372,7 @@ mod tests {
     }
 
     /// Drives an installed Chromium browser; `cargo test chromium -- --ignored --nocapture`.
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     #[test]
     #[ignore]
     fn chromium_starts_reports_ready_and_navigates() {

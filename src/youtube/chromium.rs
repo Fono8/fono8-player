@@ -30,11 +30,25 @@ const BROWSERS: &[&str] = &[
     "microsoft-edge",
 ];
 
-/// The first Chromium-based browser on `PATH`, or `FONO8_BROWSER`.
+#[cfg(target_os = "macos")]
+const MAC_BROWSERS: &[&str] = &[
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+];
+
+/// `FONO8_BROWSER`, then the first Chromium-based browser in /Applications (macOS) or on `PATH`.
 pub fn find_browser() -> Option<PathBuf> {
     if let Some(custom) = std::env::var_os("FONO8_BROWSER") {
         let path = PathBuf::from(custom);
         return if path.is_file() { Some(path) } else { None };
+    }
+    #[cfg(target_os = "macos")]
+    for candidate in MAC_BROWSERS {
+        if Path::new(candidate).is_file() {
+            return Some(PathBuf::from(candidate));
+        }
     }
     let path = std::env::var_os("PATH")?;
     for name in BROWSERS {
@@ -386,10 +400,13 @@ pub fn spawn_login(browser: &Path, profile: &Path) -> std::io::Result<Child> {
 /// `true` once the profile holds a Google session cookie for YouTube, i.e. the user
 /// finished signing in. Reads a copy of the cookie database (names only, never values).
 pub fn signed_in_cookie(profile: &Path) -> bool {
-    let cookies = profile.join("Default").join("Cookies");
-    if !cookies.is_file() {
+    // Newer Chrome builds keep the database under Default/Network.
+    let Some(dir) =
+        [profile.join("Default"), profile.join("Default").join("Network")].into_iter().find(|dir| dir.join("Cookies").is_file())
+    else {
         return false;
-    }
+    };
+    let cookies = dir.join("Cookies");
     let scratch = std::env::temp_dir().join(format!("fono8-cookies-{}", std::process::id()));
     let _ = std::fs::create_dir_all(&scratch);
     let copy = scratch.join("Cookies");
@@ -397,7 +414,7 @@ pub fn signed_in_cookie(profile: &Path) -> bool {
         return false;
     }
     for suffix in ["-wal", "-journal"] {
-        let source = profile.join("Default").join(format!("Cookies{suffix}"));
+        let source = dir.join(format!("Cookies{suffix}"));
         let target = scratch.join(format!("Cookies{suffix}"));
         if source.is_file() {
             let _ = std::fs::copy(&source, &target);
