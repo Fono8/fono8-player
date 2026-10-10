@@ -275,6 +275,7 @@
   "sleep_timer_cancel": "Anuluj timer",
   "sleep_timer_finished": "Czas minął. Muzyka została zatrzymana.",
   "spotify_access_denied": "Spotify odmówiło odtwarzania. Sprawdź Premium i czy Twoje konto ma dostęp do tej aplikacji deweloperskiej Spotify.",
+  "spotify_user_not_allowed": "Spotify nie pozwala temu kontu korzystać z Twojej aplikacji deweloperskiej. Zaloguj się kontem, które utworzyło aplikację, albo dodaj to konto w Spotify Developer Dashboard: Twoja aplikacja > Settings > User Management (do 5 użytkowników).",
   "spotify_attribution": "Metadane i okładki dostarcza Spotify.",
   "spotify_auth_failed": "Spotify nie autoryzowało sesji. Zaloguj się ponownie i sprawdź Client ID oraz Redirect URI.",
   "spotify_autoplay_error": "Spotify zablokowało automatyczne odtwarzanie. Wybierz Wznów, aby spróbować ponownie.",

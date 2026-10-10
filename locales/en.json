@@ -273,6 +273,7 @@
   "sleep_timer_cancel": "Cancel timer",
   "sleep_timer_finished": "Sleep timer finished. Playback stopped.",
   "spotify_access_denied": "Spotify denied playback. Check Premium and whether your account is allowed to use this Spotify developer app.",
+  "spotify_user_not_allowed": "Spotify does not let this account use your developer app. Sign in with the account that created the app, or add this account in the Spotify Developer Dashboard: your app > Settings > User Management (up to 5 users).",
   "spotify_attribution": "Metadata and covers are provided by Spotify.",
   "spotify_auth_failed": "Spotify could not authorize this session. Sign in again and check the Client ID and Redirect URI.",
   "spotify_autoplay_error": "Spotify blocked automatic playback. Choose Resume to try again.",
