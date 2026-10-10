@@ -288,6 +288,16 @@ impl Playback {
         }
     }
 
+    /// Restore a saved queue without playing anything: `current` becomes the current
+    /// item, and Play starts it from the beginning.
+    pub fn restore(&mut self, queue: Vec<String>, current: Option<usize>) {
+        self.queue = queue;
+        self.index = current.filter(|i| *i < self.queue.len());
+        self.history.clear();
+        self.failed.clear();
+        self.events.push(PlaybackEvent::QueueChanged);
+    }
+
     pub fn set_duration_hint(&mut self, seconds: f64) {
         self.duration_hint = seconds;
     }
@@ -682,6 +692,28 @@ impl Playback {
     }
 }
 
+/// The part of a saved queue that can be restored: the items `keep` accepts, in order,
+/// without duplicates, and the new position of the current item. When the current item
+/// is gone, the next kept item takes its place (or the last one when none follows).
+pub fn restorable(saved: &[String], current: Option<usize>, keep: impl Fn(&str) -> bool) -> (Vec<String>, Option<usize>) {
+    let mut seen = HashSet::new();
+    let mut queue = Vec::new();
+    let mut index = None;
+    for (position, path) in saved.iter().enumerate() {
+        if !keep(path) || !seen.insert(path.as_str()) {
+            continue;
+        }
+        if index.is_none() && current.is_some_and(|c| position >= c) {
+            index = Some(queue.len());
+        }
+        queue.push(path.clone());
+    }
+    if current.is_some() && index.is_none() && !queue.is_empty() {
+        index = Some(queue.len() - 1);
+    }
+    (queue, index)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -696,6 +728,35 @@ mod tests {
             .into_iter()
             .filter_map(|e| if let PlaybackEvent::Error(m) = e { Some(m.key) } else { None })
             .collect()
+    }
+
+    #[test]
+    fn a_saved_queue_is_restored_without_missing_items() {
+        let list = |items: &[&str]| items.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        let saved = list(&["a", "b", "c", "d"]);
+        let all = |_: &str| true;
+        assert_eq!(restorable(&saved, Some(2), all), (saved.clone(), Some(2)));
+        assert_eq!(restorable(&saved, None, all), (saved.clone(), None));
+        // The current item is gone: the next kept one takes its place.
+        assert_eq!(restorable(&saved, Some(1), |p| p != "b"), (list(&["a", "c", "d"]), Some(1)));
+        // Nothing follows the missing current item: the last kept one.
+        assert_eq!(restorable(&saved, Some(3), |p| p != "d"), (list(&["a", "b", "c"]), Some(2)));
+        assert_eq!(restorable(&list(&["a", "a", "b"]), Some(2), all), (list(&["a", "b"]), Some(1)), "no duplicates");
+        assert_eq!(restorable(&saved, Some(0), |_| false), (Vec::new(), None));
+        assert_eq!(restorable(&saved, Some(9), all), (saved.clone(), Some(3)), "an index past the end");
+    }
+
+    #[test]
+    fn a_restored_queue_waits_for_play() {
+        let mut playback = Playback::new();
+        let (link, commands) = test_link();
+        playback.spotify = Some(link);
+        playback.restore(vec![ONE.into(), TWO.into()], Some(1));
+        assert_eq!(playback.current(), Some(TWO));
+        assert!(!playback.playing());
+        assert!(!commands.try_iter().any(|c| matches!(c, Command::Load { .. })), "nothing starts");
+        playback.toggle();
+        assert!(commands.try_iter().any(|c| c == Command::Load { uri: TWO.into() }), "Play starts the current item");
     }
 
     #[test]
