@@ -308,6 +308,8 @@ pub struct Fono8 {
     pub busy: bool,
     pub status: Message,
     pub current_track: Option<Track>,
+    /// The queue and current index as last saved, to save only real changes.
+    saved_queue: (Vec<String>, Option<usize>),
     pub tracks: Vec<Track>,
     pub playlists: Vec<PlaylistRow>,
     pub recent: Vec<Track>,
@@ -411,6 +413,7 @@ impl Fono8 {
             busy: false,
             status: Message::new("ready"),
             current_track: None,
+            saved_queue: (Vec::new(), None),
             tracks: Vec::new(),
             playlists: Vec::new(),
             recent: Vec::new(),
@@ -431,6 +434,7 @@ impl Fono8 {
         this.tray = Tray::start(this.tray_texts(), this.playback.engine.levels());
         debug(|| format!("tray available: {}, font: {}", this.tray.is_some(), this.font_family));
         this.playback.preview_dir = this.library.path.parent().map(|dir| dir.join("tidal-previews"));
+        this.restore_queue();
         this.ensure_favorites();
         this.refresh_playlists(None, true);
         if let Some(client_id) = this.library.setting_string("spotify_client_id").filter(|id| !id.is_empty()) {
@@ -518,7 +522,11 @@ impl Fono8 {
                     .then(|| crate::stream_tap::StreamTap::start(&self.spotify_profile_dir(), self.playback.engine.levels()));
             }
         }
-        for event in self.playback.take_events() {
+        let events = self.playback.take_events();
+        if events.iter().any(|e| matches!(e, PlaybackEvent::QueueChanged | PlaybackEvent::TrackChanged(_))) {
+            self.save_queue();
+        }
+        for event in events {
             changed = true;
             match event {
                 PlaybackEvent::TrackChanged(path) => self.track_changed(&path),
@@ -721,6 +729,7 @@ impl Fono8 {
             return;
         }
         self.save_window_state();
+        self.save_queue();
         self.quitting = true;
         self.sleep_timer.cancel();
         if let Some(job) = &self.scanner {
@@ -2284,6 +2293,42 @@ impl Fono8 {
 
     pub fn queue_tracks(&self) -> Vec<(usize, Track)> {
         self.playback.queue.iter().enumerate().filter_map(|(i, path)| self.library.track(path).map(|t| (i, t))).collect()
+    }
+
+    /// Bring back the queue saved when Fono8 last ran, with its current item selected
+    /// but not playing. Items that are no longer in the library (or whose local file is
+    /// gone) are left out. Online items start their engine only when Play is pressed.
+    fn restore_queue(&mut self) {
+        let saved = self.library.setting_strings("queue");
+        let saved_index = self.library.setting("queue_index").and_then(|v| v.as_u64()).map(|i| i as usize);
+        let library = &self.library;
+        let (queue, index) = crate::playback::restorable(&saved, saved_index, |path| {
+            library.track(path).is_some() && (library::is_remote_path(path) || Path::new(path).is_file())
+        });
+        // What is stored now; a cleaned-up queue is saved again on the next tick.
+        self.saved_queue = (saved, saved_index);
+        if queue.is_empty() {
+            return;
+        }
+        self.playback.restore(queue, index);
+        if let Some(track) = self.playback.current().and_then(|path| self.library.track(path)) {
+            self.playback.set_duration_hint(track.duration);
+            self.current_track = Some(track);
+            self.update_tray_song();
+        }
+    }
+
+    /// Save the queue and its current item when they changed (see [`Self::restore_queue`]).
+    fn save_queue(&mut self) {
+        if self.quitting {
+            return;
+        }
+        let state = (self.playback.queue.clone(), self.playback.index);
+        if state != self.saved_queue {
+            self.library.set_setting("queue", json!(state.0));
+            self.library.set_setting("queue_index", json!(state.1));
+            self.saved_queue = state;
+        }
     }
 
     fn reset_now_playing(&mut self) {
