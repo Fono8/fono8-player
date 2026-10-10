@@ -35,7 +35,7 @@ fn main() {
         resource.set("ProductName", "Fono8");
         resource.set("FileDescription", "Fono8 - music player");
         resource.set("CompanyName", "OPEN8");
-        resource.set("LegalCopyright", "MIT License");
+        resource.set("LegalCopyright", "Copyright 2026 OPEN8. GPL-3.0-or-later");
         if let Err(error) = resource.compile() {
             println!("cargo:warning=Windows resources not embedded: {error}");
         }
