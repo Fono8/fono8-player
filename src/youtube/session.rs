@@ -376,7 +376,10 @@ mod tests {
     #[test]
     #[ignore]
     fn chromium_starts_reports_ready_and_navigates() {
-        let dir = std::env::temp_dir().join(format!("fono8-chromium-test-{}", std::process::id()));
+        // FONO8_YTM_TEST_PROFILE points at a copy of a signed-in profile to test searches.
+        let dir = std::env::var_os("FONO8_YTM_TEST_PROFILE")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| std::env::temp_dir().join(format!("fono8-chromium-test-{}", std::process::id())));
         let session =
             Session::spawn_chromium(&dir, &Translator::new("en"), Levels::default()).expect("a Chromium browser on PATH");
         assert_eq!(session.kind, EngineKind::Chromium);

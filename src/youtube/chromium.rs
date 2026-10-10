@@ -376,6 +376,21 @@ fn core_reply_later(engine: &mut CdpEngine, purpose: Purpose) {
     engine.replies.insert(0, Reply::Eval(purpose));
 }
 
+/// The user agent of the visible browser for this version, so the headless one is not
+/// told apart ("HeadlessChrome") by the site. `None` when the version is unknown.
+fn user_agent(browser: &Path) -> Option<String> {
+    let output = Process::new(browser).arg("--version").stdin(Stdio::null()).stderr(Stdio::null()).output().ok()?;
+    let text = String::from_utf8_lossy(&output.stdout);
+    let major: u32 = text.split_whitespace().find_map(|word| word.split('.').next()?.parse().ok().filter(|m| *m > 60))?;
+    Some(desktop_user_agent(major))
+}
+
+/// Chrome's reduced user agent for this platform and major version.
+fn desktop_user_agent(major: u32) -> String {
+    let platform = if cfg!(target_os = "macos") { "Macintosh; Intel Mac OS X 10_15_7" } else { "X11; Linux x86_64" };
+    format!("Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{major}.0.0.0 Safari/537.36")
+}
+
 /// A plain, uncontrolled browser window on the same profile for signing in.
 ///
 /// Google refuses to sign in while DevTools automation is attached ("This browser or
@@ -469,7 +484,14 @@ pub fn spawn(
     }
     let debug = std::env::var_os("FONO8_DEBUG").is_some();
     let mut process = Process::new(browser);
+    // No window at all: a minimized window could still be opened and closed by the
+    // user, and closing it quit the browser with the player. Sign-in happens in a
+    // separate, ordinary window (`spawn_login`).
+    if let Some(agent) = user_agent(browser) {
+        process.arg(format!("--user-agent={agent}"));
+    }
     process
+        .arg("--headless=new")
         .arg(format!("--user-data-dir={}", profile.display()))
         .arg("--no-first-run")
         .arg("--no-default-browser-check")
@@ -580,4 +602,16 @@ pub fn spawn(
         }
     })?;
     Ok(child)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::desktop_user_agent;
+
+    #[test]
+    fn the_headless_browser_presents_itself_as_desktop_chrome() {
+        let agent = desktop_user_agent(151);
+        assert!(agent.contains("Chrome/151.0.0.0") && agent.ends_with("Safari/537.36"));
+        assert!(!agent.contains("Headless"));
+    }
 }
