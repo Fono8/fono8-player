@@ -20,7 +20,7 @@ What runs when:
 | --- | --- |
 | Pull request to `main`, push to `main` | `cargo test` on Linux and Windows, no packages |
 | Tag `v<version>` on `main` | tests, packages, draft release |
-| **Run workflow** (on demand) | tests and packages, no release |
+| **Run workflow** (on demand) | tests and packages, no release; the `platform` input builds all platforms or only Linux, Windows or macOS |
 
 Pushes to `main` run only the tests; the tag push builds the packages. A tag
 whose commit is not on `main` stops the workflow. The packages are under
