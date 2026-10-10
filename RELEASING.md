@@ -7,7 +7,7 @@ Releases are built by GitHub Actions (the **Desktop builds** workflow,
 | --- | --- | --- |
 | Linux x86_64 | Ubuntu 22.04 (glibc baseline) | `Fono8-<version>-x86_64.AppImage`, `Fono8-<version>-linux-x86_64.tar.gz` |
 | Windows x64 | windows-2022 | `Fono8-<version>-windows-x86_64.zip` (`Fono8/fono8.exe`, `Fono8/fono8-web.exe`) |
-| macOS Apple Silicon | macos-15 | `Fono8-<version>-macos-arm64.dmg` (`Fono8.app`, ad-hoc signed, not notarized; experimental) |
+| macOS (Apple Silicon and Intel) | macos-15 | `Fono8-<version>-macos-universal.dmg` (universal `Fono8.app`, ad-hoc signed, not notarized; experimental) |
 
 Every file comes with a `.sha256`. The workflow runs the tests, builds the
 release binaries, packages them, verifies the checksums and starts every package
@@ -49,7 +49,7 @@ whose commit is not on `main` stops the workflow. The packages are under
    - Windows 10/11: the whole ZIP extracted, `fono8.exe` starts without a console
      window, the taskbar icon is right, a local file plays, YouTube Music works
      through WebView2.
-   - macOS (Apple Silicon): the `.dmg` opens, Fono8 starts after "Open Anyway",
+   - macOS (Apple Silicon or Intel): the `.dmg` opens, Fono8 starts after "Open Anyway",
      the window and the menu bar icon work, a local file plays.
    - Spotify (Linux, with Chrome/Edge/Brave installed) and the TIDAL import on a
      test account.

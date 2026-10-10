@@ -2,8 +2,8 @@ name: Desktop builds
 
 # Pull requests to main and pushes to main: tests on Linux, Windows and macOS.
 # A `v<version>` tag on main and manual runs: tests, then the packages (Linux
-# tar.gz + AppImage, Windows ZIP, macOS .dmg for Apple Silicon); a tag also
-# creates a draft release. Intel Macs are not built yet.
+# tar.gz + AppImage, Windows ZIP, macOS .dmg with a universal app for Apple
+# Silicon and Intel); a tag also creates a draft release.
 
 on:
   workflow_dispatch:
@@ -58,20 +58,27 @@ jobs:
             # Oldest supported glibc baseline.
             os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+            build: --target x86_64-unknown-linux-gnu
           - name: windows-x86_64
             os: windows-2022
             target: x86_64-pc-windows-msvc
-          - name: macos-arm64
-            # Apple Silicon; the .dmg is ad-hoc signed, not notarized.
+            build: --target x86_64-pc-windows-msvc
+          - name: macos-universal
+            # Tests run natively on Apple Silicon; the release build adds Intel and
+            # scripts/package.sh merges both into one universal app (lipo). The .dmg
+            # is ad-hoc signed, not notarized.
             os: macos-15
             target: aarch64-apple-darwin
+            extra-targets: x86_64-apple-darwin
+            build: --target aarch64-apple-darwin --target x86_64-apple-darwin
+            package-target: universal-apple-darwin
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.target }}${{ matrix.extra-targets && format(',{0}', matrix.extra-targets) || '' }}
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
@@ -109,7 +116,7 @@ jobs:
           cargo test --locked --workspace --target ${{ matrix.target }}
       - name: Build release binaries
         if: env.PACKAGE == 'true'
-        run: cargo build --locked --release --workspace --target ${{ matrix.target }}
+        run: cargo build --locked --release --workspace ${{ matrix.build }}
       - uses: taiki-e/install-action@v2
         if: env.PACKAGE == 'true'
         with:
@@ -125,7 +132,7 @@ jobs:
           echo "APPIMAGE_RUNTIME=$PWD/build/tools/runtime-x86_64" >> "$GITHUB_ENV"
       - name: Package
         if: env.PACKAGE == 'true'
-        run: scripts/package.sh "${{ matrix.target }}" "${{ matrix.name }}"
+        run: scripts/package.sh "${{ matrix.package-target || matrix.target }}" "${{ matrix.name }}"
       - name: Verify checksums
         if: env.PACKAGE == 'true'
         working-directory: dist
@@ -153,9 +160,15 @@ jobs:
               ;;
             macOS)
               mnt="$RUNNER_TEMP/fono8-dmg"
-              hdiutil attach -nobrowse -readonly -mountpoint "$mnt" dist/Fono8-*-macos-arm64.dmg
+              hdiutil attach -nobrowse -readonly -mountpoint "$mnt" dist/Fono8-*-macos-universal.dmg
               app="$mnt/Fono8.app"
               test -x "$app/Contents/MacOS/fono8" && test -x "$app/Contents/MacOS/fono8-web"
+              # Both architectures in both executables.
+              for exe in fono8 fono8-web; do
+                archs="$(lipo -archs "$app/Contents/MacOS/$exe")"
+                echo "$exe: $archs"
+                [[ " $archs " == *" arm64 "* && " $archs " == *" x86_64 "* ]]
+              done
               test -f "$app/Contents/Resources/fono8.icns" && test -f "$app/Contents/Resources/LICENSE"
               test -L "$mnt/Applications"
               plutil -lint "$app/Contents/Info.plist"
@@ -198,7 +211,7 @@ jobs:
           printf '%s\n' \
             '**Linux x86_64**: download the AppImage, make it executable (`chmod +x`) and run it. On first start Fono8 adds itself to the application menu with its icon. The tar.gz contains the same program for manual installation.' \
             '**Windows x64**: extract the entire ZIP and run `Fono8/fono8.exe` (keep `fono8-web.exe` next to it). The executable is not code-signed.' \
-            '**macOS (Apple Silicon, experimental)**: open the .dmg and drag Fono8 to Applications. The app is not notarized, so macOS blocks the first start: open System Settings > Privacy & Security and choose Open Anyway.' \
+            '**macOS (Apple Silicon and Intel, experimental)**: open the .dmg and drag Fono8 to Applications. The app is not notarized, so macOS blocks the first start: open System Settings > Privacy & Security and choose Open Anyway.' \
             '' \
             'Windows: Spotify playback and the Chromium engine for YouTube Music need the DevTools pipe, which is not supported on Windows yet; YouTube Music uses the WebView2 helper.' \
             'Spotify needs Premium and your own Spotify developer app; TIDAL is an import source (matched tracks or 30-second previews). See README.md.' \

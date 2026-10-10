@@ -5,8 +5,9 @@ Your music. All together. [fono8.com](https://fono8.com)
 **Fono8** is a desktop music player that brings music from your disk,
 **YouTube Music** and **Spotify** into one library and one queue, and imports
 your **TIDAL** lists into the same library. It runs on Linux and Windows, with an
-experimental build for Apple Silicon Macs, feels fast thanks to a native Rust + GPUI interface, and sends
-no data anywhere except to the services you sign in to.
+experimental build for Macs (Apple Silicon and Intel), feels fast thanks to a
+native Rust + GPUI interface, and sends no data anywhere except to the services
+you sign in to.
 
 ![Home: recently played, playlists and the queue](docs/screens/home.webp)
 
@@ -237,10 +238,10 @@ The code is shared between Linux, macOS and Windows; differences are behind `cfg
 | Package | AppImage and `tar.gz` with `.desktop` and icons | `Fono8.app` in a `.dmg` (ad-hoc signed, not notarized) | `zip` with `fono8.exe` (icon and version in the resources) |
 
 The [Desktop builds](.github/workflows/build.yml) workflow builds and tests
-Linux (AppImage and tar.gz), Windows (ZIP) and macOS on Apple Silicon (`.dmg`)
-on pushes to `main`, in pull requests and on demand; a `vX.Y.Z` tag creates a
-draft release with the packages and SHA-256 checksums (details and the
-checklist in [RELEASING.md](RELEASING.md)). Intel Macs are not built yet.
+Linux (AppImage and tar.gz), Windows (ZIP) and macOS (`.dmg` with a universal
+app for Apple Silicon and Intel) on pushes to `main`, in pull requests and on
+demand; a `vX.Y.Z` tag creates a draft release with the packages and SHA-256
+checksums (details and the checklist in [RELEASING.md](RELEASING.md)).
 `scripts/package.sh <target> <name>` does the packaging.
 
 **macOS is experimental.** Open the `.dmg` and drag Fono8 to Applications. The
