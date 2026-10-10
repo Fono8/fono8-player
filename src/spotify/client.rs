@@ -226,7 +226,9 @@ impl Worker {
     }
 
     fn signed_in(&mut self, now: Instant) {
-        if let Some(response) = self.call(Method::Get, &api::me_url(), None, now) {
+        // In development mode Spotify answers 403 for accounts that are not on the app's
+        // user list (Developer Dashboard > User Management).
+        if let Some(response) = self.call_or(Method::Get, &api::me_url(), None, "spotify_user_not_allowed", now) {
             let profile = api::parse_profile(&response.body);
             self.user = profile.id.clone();
             if profile.premium == Some(false) {
@@ -255,6 +257,9 @@ impl Worker {
         match result {
             Ok(response) => Some(response),
             Err(CallError::Http(response)) => {
+                // Only the path: queries can hold search terms or device ids.
+                let path = url.split('?').next().unwrap_or(url);
+                crate::app::debug(|| format!("spotify: {method:?} {path}: HTTP {}", response.status));
                 let message = if response.status == 403 { Message::new(forbidden) } else { api::error(&response) };
                 self.emit(Update::Failed(message));
                 None
@@ -474,6 +479,19 @@ mod tests {
         let log = fake.log.lock().unwrap();
         assert_eq!(log[0].2, None, "token endpoint gets no bearer");
         assert_eq!(log[1].2.as_deref(), Some("access"));
+    }
+
+    #[test]
+    fn an_account_outside_the_app_user_list_gets_a_clear_message() {
+        let now = Instant::now();
+        let (mut w, fake, _store) = worker(Memory::default());
+        w.handle(Input::Request(Request::SignIn { client_id: CLIENT.into() }), now);
+        w.take_updates();
+        let state = w.session.auth.expected_state().unwrap();
+        expect(&fake, PROVIDER.token_url, token_reply("access", Some("refresh")));
+        expect(&fake, "https://api.spotify.com/v1/me", reply(403, json!({"error": {"status": 403}})));
+        w.handle(Input::Callback(format!("/callback?code=abc&state={state}")), now);
+        assert_eq!(w.take_updates(), [Update::Failed(Message::new("spotify_user_not_allowed"))]);
     }
 
     #[test]
