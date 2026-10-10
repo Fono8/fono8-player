@@ -7,6 +7,12 @@ name: Desktop builds
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to test and package (manual runs only)
+        type: choice
+        options: [all, linux, windows, macos]
+        default: all
   push:
     branches: ["main"]
     tags: ["v*"]
@@ -44,34 +50,45 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
+  # The platforms to build: all of them, or one picked for a manual run.
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - id: plan
+        env:
+          PLATFORM: ${{ github.event_name == 'workflow_dispatch' && inputs.platform || 'all' }}
+        run: |
+          # linux: oldest supported glibc baseline.
+          # macos: tests run natively on Apple Silicon; the release build adds Intel and
+          # scripts/package.sh merges both into one universal app (lipo). The .dmg is
+          # ad-hoc signed, not notarized.
+          all='[
+            {"platform": "linux", "name": "linux-x86_64", "os": "ubuntu-22.04",
+             "target": "x86_64-unknown-linux-gnu", "build": "--target x86_64-unknown-linux-gnu"},
+            {"platform": "windows", "name": "windows-x86_64", "os": "windows-2022",
+             "target": "x86_64-pc-windows-msvc", "build": "--target x86_64-pc-windows-msvc"},
+            {"platform": "macos", "name": "macos-universal", "os": "macos-15",
+             "target": "aarch64-apple-darwin", "extra-targets": "x86_64-apple-darwin",
+             "build": "--target aarch64-apple-darwin --target x86_64-apple-darwin",
+             "package-target": "universal-apple-darwin"}
+          ]'
+          matrix="$(jq -c --arg p "$PLATFORM" '{include: map(select($p == "all" or .platform == $p))}' <<<"$all")"
+          echo "Platforms: $(jq -r '[.include[].name] | join(", ")' <<<"$matrix")"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   build:
     name: ${{ matrix.name }}
+    needs: plan
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
       PACKAGE: ${{ startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch' }}
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - name: linux-x86_64
-            # Oldest supported glibc baseline.
-            os: ubuntu-22.04
-            target: x86_64-unknown-linux-gnu
-            build: --target x86_64-unknown-linux-gnu
-          - name: windows-x86_64
-            os: windows-2022
-            target: x86_64-pc-windows-msvc
-            build: --target x86_64-pc-windows-msvc
-          - name: macos-universal
-            # Tests run natively on Apple Silicon; the release build adds Intel and
-            # scripts/package.sh merges both into one universal app (lipo). The .dmg
-            # is ad-hoc signed, not notarized.
-            os: macos-15
-            target: aarch64-apple-darwin
-            extra-targets: x86_64-apple-darwin
-            build: --target aarch64-apple-darwin --target x86_64-apple-darwin
-            package-target: universal-apple-darwin
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
       - uses: actions/checkout@v7
         with:
