@@ -248,6 +248,10 @@ fn prepare_profile(dir: &PathBuf) -> bool {
     true
 }
 
+#[cfg(target_os = "macos")]
+const SAFARI_USER_AGENT: &str =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Safari/605.1.15";
+
 fn configure<'a>(builder: WebViewBuilder<'a>, view: View, proxy: &EventLoopProxy<UserEvent>, guard: bool) -> WebViewBuilder<'a> {
     let nav_proxy = proxy.clone();
     let load_proxy = proxy.clone();
@@ -273,6 +277,12 @@ fn configure<'a>(builder: WebViewBuilder<'a>, view: View, proxy: &EventLoopProxy
             };
             let _ = load_proxy.send_event(UserEvent::PageLoad(view, stage, url));
         });
+    // WKWebView reports a user agent without Safari's version, and YouTube Music then
+    // says the browser is not supported. Present it as the Safari it is built on.
+    #[cfg(target_os = "macos")]
+    {
+        builder = builder.with_user_agent(SAFARI_USER_AGENT);
+    }
     if guard {
         // Installed before the website creates or caches MediaSource methods.
         builder = builder.with_initialization_script_for_main_only(scripts::MEDIA_GUARD, true);
