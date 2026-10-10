@@ -407,5 +407,8 @@
   "settings_general": "Ogólne",
   "settings_accounts_intro": "Podłącz serwisy streamingowe. Ich utwory trafiają do biblioteki i mieszają się w kolejce z plikami lokalnymi.",
   "settings_window": "Okno",
+  "settings_about": "O aplikacji",
+  "app_version": "Fono8 {version}",
+  "release_notes": "Informacje o wersji",
   "album": "Album"
 }

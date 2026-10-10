@@ -46,6 +46,26 @@ pub fn debug(message: impl FnOnce() -> String) {
     }
 }
 
+/// The version of this build, from Cargo.toml.
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+/// Short hash of the commit this build comes from (set by build.rs; empty outside git).
+pub const GIT_HASH: &str = env!("FONO8_GIT_HASH");
+
+/// "0.1.5 (51b8c52)", or "0.1.5" when the commit is unknown.
+pub fn version_label() -> String {
+    if GIT_HASH.is_empty() {
+        VERSION.to_string()
+    } else {
+        format!("{VERSION} ({GIT_HASH})")
+    }
+}
+pub const WEBSITE: &str = "https://fono8.com";
+
+/// The GitHub release page of this version.
+pub fn release_notes_url() -> String {
+    format!("https://github.com/Fono8/fono8-player/releases/tag/v{VERSION}")
+}
+
 pub const FULL_SIZE: (f32, f32) = (900.0, 640.0);
 pub const COMPACT_SIZE: (f32, f32) = (440.0, 210.0);
 pub const MIN_COMPACT: (f32, f32) = (420.0, 210.0);
@@ -106,6 +126,10 @@ pub struct PlaylistRow {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MenuAction {
+    /// Settings > General, where the version and the links about Fono8 are.
+    About,
+    /// Open a web page (fono8.com, the release notes) in the default browser.
+    OpenWebsite(String),
     PlaySelected,
     EnqueueSelected,
     EditMetadataSelected,
@@ -423,6 +447,11 @@ impl Fono8 {
 
     pub fn t(&self, key: &str) -> String {
         self.i18n.t(key)
+    }
+
+    /// "Fono8 0.1.5 (51b8c52)".
+    pub fn app_version(&self) -> String {
+        self.text("app_version", &[("version", Arg::Text(version_label()))])
     }
 
     pub fn text(&self, key: &str, values: &[(&str, Arg)]) -> String {
@@ -2742,6 +2771,7 @@ impl Fono8 {
             item(self.t("settings"), MenuAction::OpenSettings),
             item(self.t("mini_mode"), MenuAction::ToggleCompact),
             MenuEntry::Separator,
+            item(self.app_version(), MenuAction::About),
             item(self.t("quit_fono8"), MenuAction::Quit),
         ];
         self.open_menu(position, items);
@@ -2811,6 +2841,8 @@ impl Fono8 {
             }
             MenuAction::ToggleFavorites(paths) => self.toggle_favorites(paths),
             MenuAction::OpenSettings => self.open_settings(SettingsTab::Accounts, cx),
+            MenuAction::About => self.open_settings(SettingsTab::General, cx),
+            MenuAction::OpenWebsite(url) => cx.open_url(&url),
             MenuAction::Quit => return Some(WindowRequest::Quit),
         }
         None

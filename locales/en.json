@@ -405,5 +405,8 @@
   "settings_general": "General",
   "settings_accounts_intro": "Connect your streaming services. Their tracks join your library and mix with local files in the queue.",
   "settings_window": "Window",
+  "settings_about": "About",
+  "app_version": "Fono8 {version}",
+  "release_notes": "Release notes",
   "album": "Album"
 }

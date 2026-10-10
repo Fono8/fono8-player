@@ -2285,6 +2285,25 @@ impl MainView {
                                 .build(Self::menu_action_button(view.clone(), MenuAction::ResetLayout)),
                         ),
                 );
+                page = page
+                    .child(section(t("settings_about")))
+                    .child(
+                        div().text_size(px(theme::TEXT_DETAIL)).text_color(theme::MUTED).flex_shrink_0().child(m.app_version()),
+                    )
+                    .child(
+                        div()
+                            .flex()
+                            .flex_row()
+                            .flex_wrap()
+                            .gap(px(6.))
+                            .flex_shrink_0()
+                            .child(action_button("website", "", font.clone()).caption("fono8.com".to_string()).build(
+                                Self::menu_action_button(view.clone(), MenuAction::OpenWebsite(crate::app::WEBSITE.into())),
+                            ))
+                            .child(action_button("release-notes", "", font.clone()).caption(t("release_notes")).build(
+                                Self::menu_action_button(view.clone(), MenuAction::OpenWebsite(crate::app::release_notes_url())),
+                            )),
+                    );
             }
         }
         page
