@@ -7,7 +7,8 @@
 #            and Fono8-<version>-x86_64.AppImage when APPIMAGETOOL and APPIMAGE_RUNTIME
 #            point to the tools from scripts/fetch-appimage-tools.sh
 # macOS   -> Fono8-<version>-<name>.dmg with Fono8.app (ad-hoc signed, LICENSE and
-#            notices in Contents/Resources) and a link to /Applications
+#            notices in Contents/Resources) and a link to /Applications.
+#            Target universal-apple-darwin merges the aarch64 and x86_64 builds (lipo).
 # Windows -> Fono8-<version>-<name>.zip (fono8.exe, fono8-web.exe, README, LICENSE)
 # Every package carries LICENSE (GPL-3.0-or-later) and, when generated with
 # `cargo about generate about.hbs -o THIRD_PARTY_NOTICES.md`, the dependency licenses.
@@ -59,12 +60,17 @@ case "$target" in
     fi
     ;;
   *-apple-darwin)
-    bin="$root/target/$target/release/fono8"
     volume="$stage/volume"
     app="$volume/Fono8.app"
     mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-    cp "$bin" "$app/Contents/MacOS/fono8"
-    cp "$root/target/$target/release/fono8-web" "$app/Contents/MacOS/fono8-web"
+    for exe in fono8 fono8-web; do
+      if [ "$target" = universal-apple-darwin ]; then
+        lipo -create -output "$app/Contents/MacOS/$exe" \
+          "$root/target/aarch64-apple-darwin/release/$exe" "$root/target/x86_64-apple-darwin/release/$exe"
+      else
+        cp "$root/target/$target/release/$exe" "$app/Contents/MacOS/$exe"
+      fi
+    done
     sed "s/__VERSION__/$version/g" "$root/packaging/Info.plist" > "$app/Contents/Info.plist"
     cp "$root/README.md" "$root/LICENSE" "$app/Contents/Resources/"
     [ -f "$root/THIRD_PARTY_NOTICES.md" ] && cp "$root/THIRD_PARTY_NOTICES.md" "$app/Contents/Resources/"
