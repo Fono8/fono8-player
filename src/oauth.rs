@@ -363,14 +363,22 @@ impl Session {
 
     /// Handle the loopback callback; `true` once signed in (the refresh token is saved).
     pub fn callback(&mut self, target: &str, now: Instant) -> bool {
+        // Diagnostics name only the endpoint and status, never codes or tokens.
+        let path = self.auth.provider.callback_path;
         match self.auth.callback(target) {
-            Callback::Ignored => false,
+            Callback::Ignored => {
+                crate::app::debug(|| format!("oauth: callback on {path} ignored (no sign-in pending or state mismatch)"));
+                false
+            }
             Callback::Denied => {
+                crate::app::debug(|| format!("oauth: callback on {path}: access denied"));
                 self.fail(self.auth.provider.login_denied);
                 false
             }
             Callback::Exchange(body) => {
                 let response = self.transport.request(Method::Post, self.auth.provider.token_url, None, Some(body));
+                let url = self.auth.provider.token_url;
+                crate::app::debug(|| format!("oauth: token exchange at {url}: HTTP {}", response.status));
                 match self.auth.accept(&response, now) {
                     Ok(()) => {
                         self.save_refresh_token();

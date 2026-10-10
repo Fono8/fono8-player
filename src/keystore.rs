@@ -25,11 +25,24 @@ impl Keyring {
 
 impl TokenStore for Keyring {
     fn load(&self, client_id: &str) -> Option<String> {
-        keyring::Entry::new(SERVICE, &self.account(client_id)).ok()?.get_password().ok().filter(|t| !t.is_empty())
+        match keyring::Entry::new(SERVICE, &self.account(client_id)).and_then(|entry| entry.get_password()) {
+            Ok(token) => Some(token).filter(|t| !t.is_empty()),
+            Err(keyring::Error::NoEntry) => None,
+            Err(error) => {
+                crate::app::debug(|| format!("keyring: reading the {} session failed: {error}", self.service));
+                None
+            }
+        }
     }
 
     fn save(&self, client_id: &str, token: &str) -> bool {
-        keyring::Entry::new(SERVICE, &self.account(client_id)).and_then(|entry| entry.set_password(token)).is_ok()
+        match keyring::Entry::new(SERVICE, &self.account(client_id)).and_then(|entry| entry.set_password(token)) {
+            Ok(()) => true,
+            Err(error) => {
+                crate::app::debug(|| format!("keyring: saving the {} session failed: {error}", self.service));
+                false
+            }
+        }
     }
 
     fn delete(&self, client_id: &str) {
